@@ -89,7 +89,7 @@
                     @foreach ($detailedCart as $item)
                         <div class="flex items-start space-x-4 border-base-200 pb-4 mb-4">
                             {{-- Image src directly uses $item['image'] as it's already a full URL --}}
-                            <img src="{{ $item['image'] }}" alt="{{ $item['name'] }}" class="w-20 h-20 object-cover rounded-lg border-2 border-primary">
+                            <img src="{{ $item['image'] }}" alt="{{ $item['name'] }}" loading="lazy" class="w-20 h-20 object-cover rounded-lg border-2 border-primary">
                             <div class="flex-1">
                                 <h3 class="text-xl font-bold">{{ $item['name'] }}</h3>
                                 <p class="text-sm font-reguler mb-2">IDR {{ number_format($item['price'], 0, ',', '.') }}</p>

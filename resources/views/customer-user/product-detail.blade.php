@@ -45,6 +45,7 @@
             <div class="w-full max-w-[340px] h-full aspect-square bg-white rounded-2xl">
                 <img src="{{ $imageFrontUrl }}"
                 alt="{{ $product->name }} Front View"
+                loading="eager" fetchpriority="high" decoding="async"
                 class="w-full h-full object-cover object-center transform hover:scale-105 transition-transform duration-300 ease-in-out">
            </div>
 
@@ -64,6 +65,7 @@
             <div class="w-full max-w-[340px] h-full aspect-square bg-white rounded-2xl">
                 <img src="{{ $imageBackUrl }}"
                 alt="{{ $product->name }} Back View"
+                loading="lazy"
                 class="w-full h-full object-cover object-center transform hover:scale-105 transition-transform duration-300 ease-in-out">
             </div>
         </div>
@@ -136,7 +138,7 @@
                                 }
                             @endphp
                             <div class="w-full h-72 overflow-hidden mb-4 rounded-lg">
-                                <img src="{{ $relatedImageUrl }}" alt="{{ $relatedProduct->name }}" class="w-full h-full object-cover object-center">
+                                <img src="{{ $relatedImageUrl }}" alt="{{ $relatedProduct->name }}" loading="lazy" class="w-full h-full object-cover object-center">
                             </div>
                             <div class="flex-grow text-center w-full">
                                 <h3 class="text-lg font-semibold text-gray-900 mb-1 leading-tight">{{ $relatedProduct->name }}</h3>
@@ -177,45 +179,79 @@
     </div>
 
     <div id="cart-overlay" class="fixed inset-0 bg-black opacity-0 pointer-events-none transition-opacity duration-300 z-40"></div>
+
+    <div
+        id="product-page-config"
+        data-is-auth="{{ Auth::check() ? '1' : '0' }}"
+        data-login-url="{{ route('login') }}"
+        data-checkout-url="{{ route('checkout.index') }}"
+        data-save-cart-url="{{ route('cart.save-for-checkout') }}"
+        data-asset-base-url="{{ asset('/') }}"
+        data-storage-base-url="{{ asset('storage/') }}"
+        data-product-id="{{ $product->id }}"
+        data-product-name="{{ $product->name }}"
+        data-product-price="{{ $product->price }}"
+        data-product-image="{{ $product->image_front ?? $product->image }}"
+        data-product-stock="{{ $product->stock }}"
+        hidden
+    ></div>
 </main>
 @endsection
 
 @push('scripts')
 <script>
-// Base URLs from Blade that JavaScript can use
-const ASSET_BASE_URL = "{{ asset('/') }}";
-const STORAGE_BASE_URL = "{{ asset('storage/') }}";
+const pageConfigEl = document.getElementById('product-page-config');
+const pageConfig = pageConfigEl ? pageConfigEl.dataset : {};
+
+const IS_AUTHENTICATED = pageConfig.isAuth === '1';
+const LOGIN_URL = pageConfig.loginUrl || '/login';
+const CHECKOUT_URL = pageConfig.checkoutUrl || '/checkout';
+const SAVE_CART_URL = pageConfig.saveCartUrl || '/cart/save-for-checkout';
+
+const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+const ASSET_BASE_URL = pageConfig.assetBaseUrl || '/';
+const STORAGE_BASE_URL = pageConfig.storageBaseUrl || '/storage/';
+
+const PRODUCT_STOCK = parseInt(pageConfig.productStock || '0', 10);
+const PRODUCT_BASE = {
+    id: parseInt(pageConfig.productId || '0', 10),
+    name: pageConfig.productName || '',
+    price: Number(pageConfig.productPrice || 0),
+    image: pageConfig.productImage || '',
+};
 
 document.getElementById('proceed-to-checkout').addEventListener('click', function() {
-    @guest
+    if (!IS_AUTHENTICATED) {
         alert('Please login to proceed to checkout.');
-        window.location.href = '{{ route("login") }}';
-    @else
-        if (cart.length > 0) {
-            fetch('{{ route("cart.save-for-checkout") }}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({ cart: cart })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    window.location.href = '{{ route("checkout.index") }}';
-                } else {
-                    alert('Failed to save cart. Please try again.');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred. Please try again.');
-            });
-        } else {
-            alert('Your cart is empty.');
-        }
-    @endguest
+        window.location.href = LOGIN_URL;
+        return;
+    }
+
+    if (cart.length > 0) {
+        fetch(SAVE_CART_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': CSRF_TOKEN,
+            },
+            body: JSON.stringify({ cart: cart })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = CHECKOUT_URL;
+            } else {
+                alert('Failed to save cart. Please try again.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred. Please try again.');
+        });
+    } else {
+        alert('Your cart is empty.');
+    }
 });
 
 let selectedSize = null;
@@ -247,7 +283,7 @@ function updateAmount(change) {
     let amount = parseInt(amountInput.value);
     amount += change;
     if (amount < 1) amount = 1; // Minimum quantity is 1
-    if (amount > {{ $product->stock }}) amount = {{ $product->stock }};
+    if (amount > PRODUCT_STOCK) amount = PRODUCT_STOCK;
     amountInput.value = amount;
 }
 
@@ -275,96 +311,93 @@ function getProductImageUrl(imagePath) {
 
 
 document.getElementById('add-to-cart').addEventListener('click', function() {
-    @guest
+    if (!IS_AUTHENTICATED) {
         alert('Please login to add items to your cart.');
-        window.location.href = '{{ route("login") }}';
-    @else
-        if (this.disabled) return;
+        window.location.href = LOGIN_URL;
+        return;
+    }
 
-        const amount = parseInt(document.getElementById('amount').value);
-        if (!selectedSize) {
-            alert('Please select a size.');
-            return;
-        }
-        if (amount <= 0 || amount > {{ $product->stock }}) {
-            alert('Please enter a valid amount (up to {{ $product->stock }}).');
-            return;
-        }
+    if (this.disabled) return;
 
-        const product = {
-            id: {{ $product->id }},
-            name: "{{ $product->name }}",
-            price: {{ $product->price }},
-            size: selectedSize,
-            quantity: amount,
-            // Use image_front for the cart image if available, otherwise fallback to 'image'
-            image: "{{ $product->image_front ?? $product->image }}"
-        };
+    const amount = parseInt(document.getElementById('amount').value);
+    if (!selectedSize) {
+        alert('Please select a size.');
+        return;
+    }
+    if (amount <= 0 || amount > PRODUCT_STOCK) {
+        alert(`Please enter a valid amount (up to ${PRODUCT_STOCK}).`);
+        return;
+    }
 
-        const existingItemIndex = cart.findIndex(item => item.id === product.id && item.size === product.size);
-        if (existingItemIndex !== -1) {
-            cart[existingItemIndex].quantity += product.quantity;
-        } else {
-            cart.push(product);
-        }
+    const product = {
+        ...PRODUCT_BASE,
+        size: selectedSize,
+        quantity: amount,
+    };
 
-        localStorage.setItem('cart', JSON.stringify(cart));
-        updateCartUI();
-        showCartPopup();
-    @endguest
+    const existingItemIndex = cart.findIndex(item => item.id === product.id && item.size === product.size);
+    if (existingItemIndex !== -1) {
+        cart[existingItemIndex].quantity += product.quantity;
+    } else {
+        cart.push(product);
+    }
+
+    localStorage.setItem('cart', JSON.stringify(cart));
+    updateCartUI();
+    showCartPopup();
 });
 
 function updateCartUI() {
     const cartItemsContainer = document.getElementById('cart-items');
     cartItemsContainer.innerHTML = ''; // Clear existing items
 
-    @guest
+    if (!IS_AUTHENTICATED) {
         cartItemsContainer.innerHTML = '<p class="text-gray-500 text-center">Please login to view your cart.</p>';
         document.getElementById('cart-subtotal').textContent = 'IDR 0';
         return;
-    @else
-        if (cart.length === 0) {
-            cartItemsContainer.innerHTML = '<p class="text-gray-500 text-center">Your cart is empty.</p>';
-            document.getElementById('cart-subtotal').textContent = 'IDR 0';
-            return;
-        }
+    }
 
-        let subtotal = 0;
-        cart.forEach((item, index) => {
-            const itemTotal = item.price * item.quantity;
-            subtotal += itemTotal;
+    if (cart.length === 0) {
+        cartItemsContainer.innerHTML = '<p class="text-gray-500 text-center">Your cart is empty.</p>';
+        document.getElementById('cart-subtotal').textContent = 'IDR 0';
+        return;
+    }
 
-            // Use the new helper function for image URL
-            const cartItemImageUrl = getProductImageUrl(item.image);
+    let subtotal = 0;
+    cart.forEach((item, index) => {
+        const itemTotal = item.price * item.quantity;
+        subtotal += itemTotal;
 
-            const itemElement =
-                `<div class="flex items-start space-x-4 border-b pb-4">
-                    <img src="${cartItemImageUrl}" alt="${item.name}" class="w-20 h-20 object-cover rounded-lg border-2 border-blue-600">
-                    <div class="flex-1">
-                        <h3 class="text-lg font-semibold text-gray-900">${item.name}</h3>
-                        <p class="text-sm text-gray-600 mb-2">IDR ${item.price.toLocaleString('id-ID')}</p>
-                        <p class="text-sm text-gray-600 mb-2">Size: <span class="bg-blue-600 text-white px-2 py-1 rounded mb-2">${item.size}</span></p>
-                        <div class="flex items-center space-x-2 mt-2">
-                            <button onclick="updateCartItem(${index}, -1)" class="border border-gray-300 rounded-md px-2 py-1 text-gray-600 hover:bg-gray-100">-</button>
-                            <span class="text-gray-800">${item.quantity}</span>
-                            <button onclick="updateCartItem(${index}, 1)" class="border border-gray-300 rounded-md px-2 py-1 text-gray-600 hover:bg-gray-100">+</button>
-                        </div>
+        // Use the helper function for image URL
+        const cartItemImageUrl = getProductImageUrl(item.image);
+
+        const itemElement =
+            `<div class="flex items-start space-x-4 border-b pb-4">
+                <img src="${cartItemImageUrl}" alt="${item.name}" class="w-20 h-20 object-cover rounded-lg border-2 border-blue-600">
+                <div class="flex-1">
+                    <h3 class="text-lg font-semibold text-gray-900">${item.name}</h3>
+                    <p class="text-sm text-gray-600 mb-2">IDR ${item.price.toLocaleString('id-ID')}</p>
+                    <p class="text-sm text-gray-600 mb-2">Size: <span class="bg-blue-600 text-white px-2 py-1 rounded mb-2">${item.size}</span></p>
+                    <div class="flex items-center space-x-2 mt-2">
+                        <button onclick="updateCartItem(${index}, -1)" class="border border-gray-300 rounded-md px-2 py-1 text-gray-600 hover:bg-gray-100">-</button>
+                        <span class="text-gray-800">${item.quantity}</span>
+                        <button onclick="updateCartItem(${index}, 1)" class="border border-gray-300 rounded-md px-2 py-1 text-gray-600 hover:bg-gray-100">+</button>
                     </div>
-                    <button onclick="removeCartItem(${index})" class="text-red-600 hover:text-red-800">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
-                </div>`;
-            cartItemsContainer.innerHTML += itemElement;
-        });
+                </div>
+                <button onclick="removeCartItem(${index})" class="text-red-600 hover:text-red-800">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>`;
+        cartItemsContainer.innerHTML += itemElement;
+    });
 
-        document.getElementById('cart-subtotal').textContent = `IDR ${subtotal.toLocaleString('id-ID')}`;
-    @endguest
+    document.getElementById('cart-subtotal').textContent = `IDR ${subtotal.toLocaleString('id-ID')}`;
 }
 
 function updateCartItem(index, change) {
-    const productMaxStock = {{ $product->stock }};
+    const productMaxStock = PRODUCT_STOCK;
     const currentQuantity = cart[index].quantity;
 
     if (change > 0 && (currentQuantity + change) > productMaxStock) {

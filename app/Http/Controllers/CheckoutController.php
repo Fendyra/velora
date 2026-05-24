@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class CheckoutController extends Controller
 {
@@ -111,44 +112,61 @@ class CheckoutController extends Controller
         $shippingCost = 40000;
         $total = $subtotal + $shippingCost;
 
-        $order = Order::create([
-            'user_id' => Auth::id(),
-            'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
-            'address' => $request->address,
-            'apartment' => $request->apartment,
-            'city' => $request->city,
-            'province' => $request->province,
-            'postal_code' => $request->postal_code,
-            'phone' => $request->phone,
-            'shipping_cost' => $shippingCost,
-            'total_amount' => $total,
-            'status' => 'pending',
-        ]);
+        DB::beginTransaction();
+        $paymentProofPath = null;
 
-        if ($request->hasFile('payment_proof')) {
-            $path = $request->file('payment_proof')->store('payment_proofs', 'public');
-            $order->update(['payment_proof' => $path]);
-        }
-
-        foreach ($cart as $item) {
-            OrderItem::create([
-                'order_id' => $order->id,
-                'product_id' => $item['id'],
-                'size' => $item['size'],
-                'quantity' => $item['quantity'],
-                'price' => $item['price'],
+        try {
+            $order = Order::create([
+                'user_id' => Auth::id(),
+                'first_name' => $request->first_name,
+                'last_name' => $request->last_name,
+                'address' => $request->address,
+                'apartment' => $request->apartment,
+                'city' => $request->city,
+                'province' => $request->province,
+                'postal_code' => $request->postal_code,
+                'phone' => $request->phone,
+                'shipping_cost' => $shippingCost,
+                'total_amount' => $total,
+                'status' => 'pending',
             ]);
 
-            $product = Product::find($item['id']);
-            if ($product) {
-                $product->decrement('stock', $item['quantity']);
+            if ($request->hasFile('payment_proof')) {
+                $paymentProofPath = $request->file('payment_proof')->store('payment_proofs', 'public');
+                $order->update(['payment_proof' => $paymentProofPath]);
             }
+
+            foreach ($cart as $item) {
+                OrderItem::create([
+                    'order_id' => $order->id,
+                    'product_id' => $item['id'],
+                    'size' => $item['size'],
+                    'quantity' => $item['quantity'],
+                    'price' => $item['price'],
+                ]);
+
+                $product = Product::find($item['id']);
+                if ($product) {
+                    $product->decrement('stock', $item['quantity']);
+                }
+            }
+
+            DB::commit();
+
+            Cookie::queue(Cookie::forget('cart'));
+
+            return redirect()->route('order.success')->with('success', 'Order placed successfully!');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            if ($paymentProofPath && Storage::disk('public')->exists($paymentProofPath)) {
+                Storage::disk('public')->delete($paymentProofPath);
+            }
+
+            report($e);
+
+            return redirect()->back()->with('error', 'Failed to place order. Please try again.');
         }
-
-        Cookie::queue(Cookie::forget('cart'));
-
-        return redirect()->route('order.success')->with('success', 'Order placed successfully!');
     }
 
     public function success()

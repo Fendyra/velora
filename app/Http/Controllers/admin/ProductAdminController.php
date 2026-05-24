@@ -5,11 +5,14 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\Category;
+use App\Traits\ImageUploadTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class ProductAdminController extends Controller
 {
+    use ImageUploadTrait;
+
     public function index(Request $request)
     {
         $query = Product::with('category');
@@ -52,8 +55,8 @@ class ProductAdminController extends Controller
             'shipping_cost' => 'nullable|numeric|min:0',
             'category_id' => 'required|exists:categories,id',
             // Validation for explicit front and back images
-            'image_front' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-            'image_back' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048'
+            'image_front' => $this->imageUploadRule(required: true),
+            'image_back' => $this->imageUploadRule(required: false),
         ]);
 
         $data = $request->only([
@@ -61,23 +64,9 @@ class ProductAdminController extends Controller
             'discount', 'stock', 'shipping_cost', 'category_id'
         ]);
 
-        // Handle image_front upload
-        if ($request->hasFile('image_front')) {
-            $data['image_front'] = $request->file('image_front')->store('products', 'public');
-            // Crucially, set the main 'image' field to the front image for shop page consistency
-            $data['image'] = $data['image_front'];
-        } else {
-            // If image_front is required, this else block should technically not be reached unless validation is skipped.
-            $data['image_front'] = null;
-            $data['image'] = null;
-        }
-
-        // Handle image_back upload
-        if ($request->hasFile('image_back')) {
-            $data['image_back'] = $request->file('image_back')->store('products', 'public');
-        } else {
-            $data['image_back'] = null; // Set to null if no back image is provided
-        }
+        $data['image_front'] = $this->storeImageFromRequest($request, 'image_front', 'products');
+        $data['image'] = $data['image_front'];
+        $data['image_back'] = $this->storeImageFromRequest($request, 'image_back', 'products');
 
         Product::create($data);
 
@@ -107,8 +96,8 @@ class ProductAdminController extends Controller
             'shipping_cost' => 'nullable|numeric|min:0',
             'category_id' => 'required|exists:categories,id',
             // Images are nullable for update, as they might not be changed
-            'image_front' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-            'image_back' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048'
+            'image_front' => $this->imageUploadRule(required: false),
+            'image_back' => $this->imageUploadRule(required: false),
         ]);
 
         $data = $request->only([
@@ -117,25 +106,18 @@ class ProductAdminController extends Controller
         ]);
 
         // Handle image_front update
-        if ($request->hasFile('image_front')) {
-            // Delete old image_front if it exists
-            if ($product->image_front && Storage::disk('public')->exists($product->image_front)) {
-                Storage::disk('public')->delete($product->image_front);
-            }
-            $data['image_front'] = $request->file('image_front')->store('products', 'public');
-            // Update the general 'image' field as well
-            $data['image'] = $data['image_front'];
+        $newFront = $this->storeImageFromRequest($request, 'image_front', 'products', $product->image_front);
+        if ($newFront) {
+            $data['image_front'] = $newFront;
+            $data['image'] = $newFront;
         }
         // If image_front is NOT provided in the request, and current image_front exists, retain it.
         // If you want to explicitly clear it via the form, you'd add a hidden field or checkbox.
 
         // Handle image_back update
-        if ($request->hasFile('image_back')) {
-            // Delete old image_back if it exists
-            if ($product->image_back && Storage::disk('public')->exists($product->image_back)) {
-                Storage::disk('public')->delete($product->image_back);
-            }
-            $data['image_back'] = $request->file('image_back')->store('products', 'public');
+        $newBack = $this->storeImageFromRequest($request, 'image_back', 'products', $product->image_back);
+        if ($newBack) {
+            $data['image_back'] = $newBack;
         }
         // If image_back is NOT provided, and current image_back exists, retain it.
         // If you want to explicitly clear it via the form, you'd add a hidden field or checkbox.

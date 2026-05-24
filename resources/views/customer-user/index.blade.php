@@ -1,8 +1,12 @@
 @extends('layouts.app')
 
 @section('content')
+    @php
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+    @endphp
     <!-- Background Image Section -->
-    <div class="relative w-full h-40 md:h-48 lg:h-56 bg-cover bg-center" style="background-image: url('{{ asset('/assets/images/section.png') }}')">
+    <div class="relative w-full h-40 md:h-48 lg:h-56 bg-cover bg-center" style="background-image: url('/assets/images/section.png');">
         <div class="absolute inset-0 bg-black bg-opacity-10"></div>
         <div class="absolute inset-0 flex items-center justify-center">
             <h1 class="text-4xl font-bold text-[#0009c4] text-center mt-12">PROFILE</h1>
@@ -28,13 +32,13 @@
                     <!-- Name -->
                     <div class="border-b pb-2">
                         <p class="text-sm text-gray-600">Name</p>
-                        <p class="text-lg font-semibold text-black">{{ Auth::user()->name }}</p>
+                        <p class="text-lg font-semibold text-black">{{ $user->name }}</p>
                     </div>
 
                     <!-- Email -->
                     <div class="border-b pb-2">
                         <p class="text-sm text-gray-600">Email</p>
-                        <p class="text-lg font-semibold text-black">{{ Auth::user()->email }}</p>
+                        <p class="text-lg font-semibold text-black">{{ $user->email }}</p>
                     </div>
 
                     <!-- Password -->
@@ -50,7 +54,7 @@
                     <div class="border-b pb-2 flex justify-between items-center">
                         <div>
                             <p class="text-sm text-gray-600">Telephone</p>
-                            <p class="text-lg font-semibold text-black">{{ Auth::user()->telephone }}</p>
+                            <p class="text-lg font-semibold text-black">{{ $user->telephone }}</p>
                         </div>
                         <button class="text-blue-600 hover:underline text-sm" onclick="document.getElementById('telephone-modal').showModal()">change</button>
                     </div>
@@ -101,7 +105,7 @@
                     @method('PATCH')
                     <div class="mb-4">
                         <label class="block text-black mb-1">New Telephone Number</label>
-                        <input type="tel" name="telephone" value="{{ Auth::user()->telephone }}" class="w-full border border-black bg-white rounded-md p-2 text-gray-700" required>
+                        <input type="tel" name="telephone" value="{{ $user->telephone }}" class="w-full border border-black bg-white rounded-md p-2 text-gray-700" required>
                     </div>
                     <div class="mt-6">
                         <button type="submit" class="w-full bg-blue-700 text-white py-2 px-4 rounded-md font-semibold hover:bg-blue-800 transition">Change Telephone</button>

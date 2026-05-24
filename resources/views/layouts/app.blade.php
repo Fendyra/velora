@@ -5,6 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <title>{{ config('app.name') }}</title>
+        <meta name="description" content="@yield('meta_description', 'Busy Weekends e-commerce store. Browse products and checkout securely.')">
         <link rel="icon" type="image/png" href="{{ asset('/assets/images/logo.png') }}">
         <meta http-equiv="content-type" content="text/html; charset=utf-8" />
         <meta name="author" content="bsyweeknds" />
@@ -31,6 +32,20 @@
     </head>
 
     <body>
+        @php
+            /** @var \App\Models\User|null $authUser */
+            $authUser = Auth::user();
+        @endphp
+        <div
+            id="app-config"
+            data-is-auth="{{ Auth::check() ? '1' : '0' }}"
+            data-login-url="{{ route('login') }}"
+            data-checkout-url="{{ route('checkout.index') }}"
+            data-save-cart-url="{{ route('cart.save-for-checkout') }}"
+            data-search-url="{{ route('search.products') }}"
+            data-product-show-template="{{ route('product.show', ['id' => '__ID__']) }}"
+            hidden
+        ></div>
         <!-- Header Nav -->
         <header id="header" class="header header-fullwidth header-transparent-bg">
             <nav id="MainNavbar" class="navbar fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out px-2 sm:px-5 py-1 flex flex-wrap justify-between items-center navbar-visible">
@@ -87,13 +102,13 @@
                             <div class="dropdown dropdown-end h-fit">
                                 <label tabindex="0" class="header-tools__item flex items-center gap-2 cursor-pointer h-fit min-h-fit">
                                     <iconify-icon icon="ph:user-circle" width="22" height="22" style="color: #fff;"></iconify-icon>
-                                    <span class="hidden sm:inline text-xs sm:text-sm font-semibold text-white truncate max-w-[80px] sm:max-w-full leading-none">{{ Auth::user()->name }}</span>
+                                    <span class="hidden sm:inline text-xs sm:text-sm font-semibold text-white truncate max-w-[80px] sm:max-w-full leading-none">{{ $authUser?->name }}</span>
                                 </label>
                                 <ul tabindex="0" class="menu dropdown-content mt-2 p-2 shadow bg-white rounded-box w-52">
                                     <li class="rounded-box text-blue-700">
-                                        @if(Auth::user()->utype === 'ADM')
+                                        @if($authUser?->utype === 'ADM')
                                             <a href="{{ route('admin.dashboard') }}">Dashboard Admin</a>
-                                        @elseif(Auth::user()->utype === 'OWN')
+                                        @elseif($authUser?->utype === 'OWN')
                                             <a href="{{ route('owner.dashboard') }}">Dashboard Owner</a>
                                         @else
                                             <a href="{{ route('customer-user.index') }}">Profile User</a>
@@ -215,6 +230,16 @@
         <script src="https://cdn.tailwindcss.com"></script>
         <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
         <script>
+            const appConfigEl = document.getElementById('app-config');
+            const appConfig = appConfigEl ? appConfigEl.dataset : {};
+            const IS_AUTHENTICATED = appConfig.isAuth === '1';
+            const LOGIN_URL = appConfig.loginUrl || '/login';
+            const CHECKOUT_URL = appConfig.checkoutUrl || '/checkout';
+            const SAVE_CART_URL = appConfig.saveCartUrl || '/cart/save-for-checkout';
+            const SEARCH_URL = appConfig.searchUrl || '/search';
+            const PRODUCT_SHOW_TEMPLATE = appConfig.productShowTemplate || '/shop/product/__ID__';
+            const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
             // Scroll-based navbar visibility
             let lastScrollTop = 0;
             const navbar = document.getElementById('MainNavbar');
@@ -305,15 +330,16 @@
 
                 cartBtn.addEventListener('click', function(event) {
                     event.stopPropagation();
-                    @guest
+                    if (!IS_AUTHENTICATED) {
                         showLoginModal();
-                    @else
-                        updateCartUI();
-                        cartDropdown.classList.toggle('hidden');
-                        // Ensure navbar stays visible when cart is active
-                        navbar.classList.remove('navbar-hidden');
-                        navbar.classList.add('navbar-visible');
-                    @endguest
+                        return;
+                    }
+
+                    updateCartUI();
+                    cartDropdown.classList.toggle('hidden');
+                    // Ensure navbar stays visible when cart is active
+                    navbar.classList.remove('navbar-hidden');
+                    navbar.classList.add('navbar-visible');
                 });
 
                 document.addEventListener('click', function(event) {
@@ -337,23 +363,28 @@
                 };
 
                 window.proceedToCheckout = function() {
+                    if (!IS_AUTHENTICATED) {
+                        showLoginModal();
+                        return;
+                    }
+
                     if (cart.length === 0) {
                         alert('Your cart is empty.');
                         return;
                     }
 
-                    fetch('{{ route("cart.save-for-checkout") }}', {
+                    fetch(SAVE_CART_URL, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            'X-CSRF-TOKEN': CSRF_TOKEN
                         },
                         body: JSON.stringify({ cart: cart })
                     })
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            window.location.href = '{{ route("checkout.index") }}';
+                            window.location.href = CHECKOUT_URL;
                         } else {
                             alert('Failed to save cart. Please try again.');
                         }
@@ -370,52 +401,52 @@
                     const cartSubtotal = document.getElementById('cartSubtotal');
                     cartItemsContainer.innerHTML = '';
 
-                    @guest
+                    if (!IS_AUTHENTICATED) {
                         cartItemsContainer.innerHTML = '<p class="text-gray-500 text-center">Please login to view your cart.</p>';
                         cartCount.classList.add('hidden');
                         cartSubtotal.textContent = 'IDR 0';
                         return;
-                    @else
-                        if (cart.length === 0) {
-                            cartItemsContainer.innerHTML = '<p class="text-gray-500 text-center">Your cart is empty.</p>';
-                            cartCount.classList.add('hidden');
-                            cartSubtotal.textContent = 'IDR 0';
-                            return;
-                        }
+                    }
 
-                        let subtotal = 0;
-                        cartCount.classList.remove('hidden');
-                        cartCount.textContent = cart.reduce((sum, item) => sum + item.quantity, 0);
+                    if (cart.length === 0) {
+                        cartItemsContainer.innerHTML = '<p class="text-gray-500 text-center">Your cart is empty.</p>';
+                        cartCount.classList.add('hidden');
+                        cartSubtotal.textContent = 'IDR 0';
+                        return;
+                    }
 
-                        cart.forEach((item, index) => {
-                            const itemTotal = item.price * item.quantity;
-                            subtotal += itemTotal;
+                    let subtotal = 0;
+                    cartCount.classList.remove('hidden');
+                    cartCount.textContent = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-                            const itemElement = `
-                                <div class="flex items-start space-x-4 pb-4">
-                                    <img src="${item.image}" alt="${item.name}" class="w-16 h-16 object-cover rounded-lg border-2 border-primary">
-                                    <div class="flex-1">
-                                        <h3 class="text-sm font-semibold text-gray-900">${item.name}</h3>
-                                        <p class="text-xs text-gray-600 mb-1">IDR ${item.price.toLocaleString('id-ID')}</p>
-                                        <p class="text-xs text-gray-600 mb-1">Size: <span class="bg-primary text-white px-1 py-0.5 rounded">${item.size}</span></p>
-                                        <div class="flex items-center gap-2 mt-1">
-                                            <button onclick="decreaseQuantity(${index}, event)" class="text-white bg-gray-500 hover:bg-gray-600 rounded-full w-6 h-6 flex items-center justify-center">-</button>
-                                            <span class="text-sm">${item.quantity}</span>
-                                            <button onclick="increaseQuantity(${index}, event)" class="text-white bg-gray-500 hover:bg-gray-600 rounded-full w-6 h-6 flex items-center justify-center">+</button>
-                                        </div>
+                    cart.forEach((item, index) => {
+                        const itemTotal = item.price * item.quantity;
+                        subtotal += itemTotal;
+
+                        const itemElement = `
+                            <div class="flex items-start space-x-4 pb-4">
+                                <img src="${item.image}" alt="${item.name}" class="w-16 h-16 object-cover rounded-lg border-2 border-primary">
+                                <div class="flex-1">
+                                    <h3 class="text-sm font-semibold text-gray-900">${item.name}</h3>
+                                    <p class="text-xs text-gray-600 mb-1">IDR ${item.price.toLocaleString('id-ID')}</p>
+                                    <p class="text-xs text-gray-600 mb-1">Size: <span class="bg-primary text-white px-1 py-0.5 rounded">${item.size}</span></p>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        <button onclick="decreaseQuantity(${index}, event)" class="text-white bg-gray-500 hover:bg-gray-600 rounded-full w-6 h-6 flex items-center justify-center">-</button>
+                                        <span class="text-sm">${item.quantity}</span>
+                                        <button onclick="increaseQuantity(${index}, event)" class="text-white bg-gray-500 hover:bg-gray-600 rounded-full w-6 h-6 flex items-center justify-center">+</button>
                                     </div>
-                                    <button onclick="removeCartItem(${index})" class="text-red-600 hover:text-red-800">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                        </svg>
-                                    </button>
                                 </div>
-                            `;
-                            cartItemsContainer.innerHTML += itemElement;
-                        });
+                                <button onclick="removeCartItem(${index})" class="text-red-600 hover:text-red-800">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        `;
+                        cartItemsContainer.innerHTML += itemElement;
+                    });
 
-                        cartSubtotal.textContent = `IDR ${subtotal.toLocaleString('id-ID')}`;
-                    @endguest
+                    cartSubtotal.textContent = `IDR ${subtotal.toLocaleString('id-ID')}`;
                 }
 
                 window.removeCartItem = function(index) {
@@ -452,9 +483,9 @@
                         return;
                     }
 
-                    fetch('{{ route("search.products") }}?q=' + encodeURIComponent(query), {
+                    fetch(SEARCH_URL + '?q=' + encodeURIComponent(query), {
                         headers: {
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'X-CSRF-TOKEN': CSRF_TOKEN,
                             'Accept': 'application/json'
                         }
                     })
@@ -468,8 +499,9 @@
                         }
 
                         data.forEach(product => {
+                            const productUrl = PRODUCT_SHOW_TEMPLATE.replace('__ID__', encodeURIComponent(product.id));
                             const productElement = `
-                                <a href="{{ route('product.show', '') }}/${product.id}" class="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded-lg">
+                                <a href="${productUrl}" class="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded-lg">
                                     <img src="${product.image}" alt="${product.name}" class="w-10 h-10 object-cover rounded-lg">
                                     <div>
                                         <h4 class="text-sm font-semibold text-gray-900">${product.name}</h4>

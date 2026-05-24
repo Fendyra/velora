@@ -63,7 +63,7 @@
                         @if (Auth::check())
                             <a href="{{ route('product.show', $product->id) }}" class="block">
                                 <div class="mb-4 overflow-hidden">
-                                    <img src="{{ $imageUrl }}" alt="{{ $product->name }}" class="w-auto h-auto object-cover hover:scale-105 transition-transform duration-300">
+                                    <img src="{{ $imageUrl }}" alt="{{ $product->name }}" loading="lazy" class="w-auto h-auto object-cover hover:scale-105 transition-transform duration-300">
                                 </div>
                                 <h3 class="text-black font-bold mb-1 text-xl text-center">{{ $product->name }}</h3>
                                 <p class="text-black text-reguler text-center">IDR {{ number_format($product->price, 0, ',', '.') }}</p>
@@ -71,7 +71,7 @@
                         @else
                             <a href="{{ route('login') }}" class="block">
                                 <div class="mb-4 overflow-hidden">
-                                    <img src="{{ $imageUrl }}" alt="{{ $product->name }}" class="w-auto h-auto object-cover hover:scale-105 transition-transform duration-300">
+                                    <img src="{{ $imageUrl }}" alt="{{ $product->name }}" loading="lazy" class="w-auto h-auto object-cover hover:scale-105 transition-transform duration-300">
                                 </div>
                                 <h3 class="text-black font-bold mb-1 text-xl text-center">{{ $product->name }}</h3>
                                 <p class="text-black text-reguler text-center">IDR {{ number_format($product->price, 0, ',', '.') }}</p>
