@@ -14,7 +14,20 @@ class AuthUser
             return redirect()->route('login')->with('error', 'Please login to access this page.');
         }
 
-        if (Auth::user()->utype === 'USR') {
+        $user = Auth::user();
+
+        // Jika user adalah ADM, arahkan ke admin dashboard
+        if ($user->utype === 'ADM') {
+            return redirect()->route('admin.dashboard')->with('info', 'Anda diarahkan ke dashboard admin.');
+        }
+
+        // Jika user adalah OWN, arahkan ke owner dashboard
+        if ($user->utype === 'OWN') {
+            return redirect()->route('owner.dashboard');
+        }
+
+        // Izinkan hanya USR mengakses halaman user
+        if ($user->utype === 'USR') {
             return $next($request);
         }
 
