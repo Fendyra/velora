@@ -88,5 +88,16 @@ Route::prefix('owner')->middleware(['auth', 'auth.owner'])->name('owner.')->grou
     Route::post('/settings', [OwnerDashboardController::class, 'updateSettings'])->name('settings.update');
 });
 
-// Route /home biasanya default setelah login jika tidak ada redirect spesifik
-Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
+// Route /home - redirect based on user role after login
+Route::get('/home', function () {
+    $user = Auth::user();
+    if ($user) {
+        if ($user->utype === 'ADM') {
+            return redirect()->route('admin.dashboard');
+        } elseif ($user->utype === 'OWN') {
+            return redirect()->route('owner.dashboard');
+        }
+        return redirect()->route('customer-user.index');
+    }
+    return redirect()->route('index');
+})->name('home')->middleware('auth');

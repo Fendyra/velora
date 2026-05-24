@@ -39,4 +39,24 @@ class RegisterController extends Controller
             'password' => Hash::make($data['password']),
         ]);
     }
+
+    /**
+     * The user has been registered.
+     * Redirect based on user role (utype).
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  mixed  $user
+     * @return mixed
+     */
+    protected function registered(Request $request, $user)
+    {
+        if ($user->utype === 'ADM') {
+            return redirect()->route('admin.dashboard');
+        } elseif ($user->utype === 'OWN') {
+            return redirect()->route('owner.dashboard');
+        }
+
+        // Default: regular user (USR)
+        return redirect()->route('customer-user.index');
+    }
 }
