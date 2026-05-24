@@ -7,9 +7,9 @@
         <div class="relative z-10 flex flex-col justify-start h-[60vh] sm:h-[80vh] md:h-[100vh] lg:h-[115vh] pt-4 px-4 sm:px-6 mt-[50px]">
 
             <h1 class="text-7xl sm:text-7xl md:text-8xl font-bold scroll-reveal-item translate-y-10 opacity-0" style="color: var(--tw-primary);" >
-                <span>Busy</span><br>
+                <span>Velora</span><br>
                 <span>
-                    Week<span class="text-white" style="-webkit-text-stroke: 1px;">nds.</span>
+                    Vogue<span class="text-white" style="-webkit-text-stroke: 1px;"> </span>
                 </span>
             </h1>
 
