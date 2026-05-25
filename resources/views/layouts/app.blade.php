@@ -75,7 +75,11 @@
                         <!-- Search Form -->
                         <div class="relative flex items-center h-fit ">
                             <button id="searchBtn" class="header-tools__item flex items-center justify-center" aria-label="Search products">
-                                <iconify-icon icon="material-symbols:search-rounded" width="22" height="22" style="color: #fff"></iconify-icon>
+                                <!-- Search Icon SVG -->
+                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="11" cy="11" r="8"></circle>
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                                </svg>
                             </button>
                             <div id="searchForm" class="hidden absolute top-0 right-[30px] sm:right-[38px] w-40 sm:w-64 transition-all duration-300">
                                 <input type="text" id="searchInput" placeholder="Search for products..." class="input input-bordered input-sm w-full text-black bg-white focus:outline-none rounded-lg shadow-md" onkeyup="searchProducts()" onfocus="showSearchResults()" onblur="hideSearchResults()">
@@ -87,7 +91,12 @@
                         <!-- Cart Icon -->
                         <div class="relative flex items-center h-fit">
                             <button id="cartBtn" class="header-tools__item flex items-center justify-center" aria-label="View cart">
-                                <iconify-icon icon="uil:cart" width="22" height="22" style="color: #fff;"></iconify-icon>
+                                <!-- Cart Icon SVG -->
+                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="9" cy="21" r="1"></circle>
+                                    <circle cx="20" cy="21" r="1"></circle>
+                                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                                </svg>
                                 <span id="cartCount" class="absolute -top-2 -right-2 bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center hidden">0</span>
                             </button>
                         </div>
@@ -96,12 +105,20 @@
                         <div class="flex items-center h-fit">
                             @guest
                                 <a href="{{ route('login') }}" class="header-tools__item flex items-center justify-center" aria-label="Login to account">
-                                    <iconify-icon icon="ph:user-circle" width="22" height="22" style="color: #fff;"></iconify-icon>
+                                    <!-- User Icon SVG -->
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                        <circle cx="12" cy="7" r="4"></circle>
+                                    </svg>
                                 </a>
                             @else
                             <div class="dropdown dropdown-end h-fit">
                                 <label tabindex="0" class="header-tools__item flex items-center gap-2 cursor-pointer h-fit min-h-fit">
-                                    <iconify-icon icon="ph:user-circle" width="22" height="22" style="color: #fff;"></iconify-icon>
+                                    <!-- User Icon SVG -->
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                        <circle cx="12" cy="7" r="4"></circle>
+                                    </svg>
                                     <span class="hidden sm:inline text-xs sm:text-sm font-semibold text-white truncate max-w-[80px] sm:max-w-full leading-none">{{ $authUser?->name }}</span>
                                 </label>
                                 <ul tabindex="0" class="menu dropdown-content mt-2 p-2 shadow bg-white rounded-box w-52">
