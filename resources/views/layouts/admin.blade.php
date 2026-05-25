@@ -42,17 +42,13 @@
     <style>
         body { font-family: 'Poppins', sans-serif; }
         [x-cloak] { display: none !important; }
+        #delete-modal { display: none; }
+        #delete-modal.modal-open { display: flex; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased w-full h-screen">
-    <div x-data="{ 
-            sidebarOpen: window.innerWidth > 1024,
-            deleteModalOpen: false,
-            deleteUrl: ''
-        }" 
-        x-init="deleteModalOpen = false"
+    <div x-data="{ sidebarOpen: window.innerWidth > 1024 }" 
         @resize.window="sidebarOpen = window.innerWidth > 1024" 
-        @open-delete-modal.window="deleteModalOpen = true; deleteUrl = $event.detail.deleteUrl"
         class="flex h-screen">
 
         <!-- Sidebar -->
@@ -146,23 +142,8 @@
         </div>
 
         <!-- Delete Modal -->
-        <div x-show="deleteModalOpen" x-cloak
-            x-transition:enter="ease-out duration-300"
-            x-transition:enter-start="opacity-0"
-            x-transition:enter-end="opacity-100"
-            x-transition:leave="ease-in duration-200"
-            x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm">
-            <div x-show="deleteModalOpen"
-                @click.outside="deleteModalOpen = false"
-                x-transition:enter="ease-out duration-300"
-                x-transition:enter-start="opacity-0 translate-y-4 sm:scale-95"
-                x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
-                x-transition:leave="ease-in duration-200"
-                x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
-                x-transition:leave-end="opacity-0 translate-y-4 sm:scale-95"
-                class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+        <div id="delete-modal" class="fixed inset-0 z-50 items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+            <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
                 <div class="flex items-start gap-4">
                     <div class="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100">
                         <svg class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126z" /></svg>
@@ -173,19 +154,38 @@
                     </div>
                 </div>
                 <div class="mt-6 flex justify-end gap-3">
-                    <button @click.prevent="deleteModalOpen = false; deleteUrl = ''" type="button" class="rounded-xl border bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-md hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2">
+                    <button onclick="closeDeleteModal()" type="button" class="rounded-xl border bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-md hover:bg-slate-50 focus:outline-none">
                         Cancel
                     </button>
-                    <form :action="deleteUrl" method="POST" @submit.prevent="if(deleteUrl) $el.submit()">
+                    <form id="delete-form" action="" method="POST">
                         @csrf
                         @method('DELETE')
-                        <button type="submit" x-bind:disabled="!deleteUrl" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50">
+                        <button type="submit" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-md hover:bg-red-700 focus:outline-none">
                             Yes, Delete
                         </button>
                     </form>
                 </div>
             </div>
         </div>
+
+        <script>
+            function openDeleteModal(deleteUrl) {
+                document.getElementById('delete-form').action = deleteUrl;
+                document.getElementById('delete-modal').classList.add('modal-open');
+            }
+            function closeDeleteModal() {
+                document.getElementById('delete-modal').classList.remove('modal-open');
+                document.getElementById('delete-form').action = '';
+            }
+            // Close modal when clicking outside
+            document.getElementById('delete-modal').addEventListener('click', function(e) {
+                if (e.target === this) closeDeleteModal();
+            });
+            // Listen for Alpine.js event (backward compat)
+            window.addEventListener('open-delete-modal', function(e) {
+                openDeleteModal(e.detail.deleteUrl);
+            });
+        </script>
 
         @if (session('success'))
             <div x-data="{ show: true }" x-init="setTimeout(() => show = false, 4000)" x-show="show" x-cloak
