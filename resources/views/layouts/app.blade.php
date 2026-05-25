@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <title>{{ config('app.name') }}</title>
-        <meta name="description" content="@yield('meta_description', 'Busy Weekends e-commerce store. Browse products and checkout securely.')">
+        <meta name="description" content="@yield('meta_description', 'Velora e-commerce store. Browse products and checkout securely.')">
         <link rel="icon" type="image/png" href="{{ asset('/assets/images/logo.png') }}">
         <meta http-equiv="content-type" content="text/html; charset=utf-8" />
         <meta name="author" content="bsyweeknds" />
@@ -196,7 +196,7 @@
                     <h3 class="mt-6 mb-3 text-white font-bold text-lg sm:text-xl">CONTACT US</h3>
                     <ul>
                         <li><a class="footer-link" href="https://wa.me/6285602683420?text=Halo,%20saya%20tertarik%20dengan%20produk%20Anda" target="_blank">+(62) 8560 2683 420</a></li>
-                        <li><a class="footer-link break-words" href="mailto:admin@example.com?subject=Pertanyaan&body=Halo,%20saya%20ingin%20bertanya%20tentang%20produk%20anda">busyweeknds@gmail.com</a></li>
+                        <li><a class="footer-link break-words" href="mailto:admin@example.com?subject=Pertanyaan&body=Halo,%20saya%20ingin%20bertanya%20tentang%20produk%20anda">Velora@gmail.com</a></li>
                         <li><a class="footer-link" href="https://www.google.com/maps?q=Wonosobo,Central+Java,Indonesia" target="_blank">Wonosobo, Central Java, Indonesia</a></li>
                     </ul>
                 </nav>
@@ -212,7 +212,7 @@
                 </div>
             </div>
             <div class="border-t border-gray-600 text-center py-4 mt-4">
-                <p class="text-sm">© Copyright 2025 © Busy Weekends Jr</p>
+                <p class="text-sm">© Copyright 2025 © Velora</p>
             </div>
         </footer>
 
