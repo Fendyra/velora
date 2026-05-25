@@ -214,12 +214,7 @@ const ASSET_BASE_URL = pageConfig.assetBaseUrl || '/';
 const STORAGE_BASE_URL = pageConfig.storageBaseUrl || '/storage/';
 
 const PRODUCT_STOCK = parseInt(pageConfig.productStock || '0', 10);
-const PRODUCT_BASE = {
-    id: parseInt(pageConfig.productId || '0', 10),
-    name: pageConfig.productName || '',
-    price: Number(pageConfig.productPrice || 0),
-    image: pageConfig.productImage || '',
-};
+// PRODUCT_BASE dideklarasikan setelah getProductImageUrl agar fungsi sudah tersedia
 
 document.getElementById('proceed-to-checkout').addEventListener('click', function() {
     if (!IS_AUTHENTICATED) {
@@ -295,20 +290,31 @@ document.getElementById('size-guide-toggle').addEventListener('click', function(
 // Helper function to get correct image URL for JavaScript
 function getProductImageUrl(imagePath) {
     if (!imagePath) {
-        return 'https://via.placeholder.com/150'; // Placeholder if no image path
+        return 'https://via.placeholder.com/150';
     }
-    // Check if path starts with 'products/' (from storage)
+    // Already a full URL
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+        return imagePath;
+    }
+    // Path from storage (uploaded images)
     if (imagePath.startsWith('products/')) {
-        return STORAGE_BASE_URL + '/' + imagePath;
+        return STORAGE_BASE_URL.replace(/\/$/, '') + '/' + imagePath;
     }
-    // Check if path starts with '/' (from public/assets)
-    else if (imagePath.startsWith('/')) {
-        return ASSET_BASE_URL + imagePath.substring(1); // asset() handles leading slash correctly
+    // Path from public/assets (seeded images with leading slash)
+    if (imagePath.startsWith('/')) {
+        return window.location.origin + imagePath;
     }
-    // Fallback or other cases
-    return ASSET_BASE_URL + imagePath;
+    // Fallback
+    return ASSET_BASE_URL.replace(/\/$/, '') + '/' + imagePath;
 }
 
+// Deklarasi PRODUCT_BASE setelah getProductImageUrl tersedia
+const PRODUCT_BASE = {
+    id: parseInt(pageConfig.productId || '0', 10),
+    name: pageConfig.productName || '',
+    price: Number(pageConfig.productPrice || 0),
+    image: getProductImageUrl(pageConfig.productImage || ''),
+};
 
 document.getElementById('add-to-cart').addEventListener('click', function() {
     if (!IS_AUTHENTICATED) {
@@ -415,9 +421,13 @@ function updateCartItem(index, change) {
 }
 
 function removeCartItem(index) {
-    cart.splice(index, 1); // Remove item from array
-    localStorage.setItem('cart', JSON.stringify(cart)); // Update local storage
-    updateCartUI(); // Update UI to reflect changes
+    cart.splice(index, 1);
+    localStorage.setItem('cart', JSON.stringify(cart));
+    updateCartUI();
+    // Also sync with global cart if exists
+    if (typeof window.removeCartItem === 'function' && window.removeCartItem !== removeCartItem) {
+        localStorage.setItem('cart', JSON.stringify(cart));
+    }
 }
 
 function showCartPopup() {
