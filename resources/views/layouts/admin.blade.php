@@ -50,6 +50,7 @@
             deleteModalOpen: false,
             deleteUrl: ''
         }" 
+        x-init="deleteModalOpen = false"
         @resize.window="sidebarOpen = window.innerWidth > 1024" 
         @open-delete-modal.window="deleteModalOpen = true; deleteUrl = $event.detail.deleteUrl"
         class="flex h-screen">
@@ -172,13 +173,13 @@
                     </div>
                 </div>
                 <div class="mt-6 flex justify-end gap-3">
-                    <button @click="deleteModalOpen = false" type="button" class="rounded-xl border bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-md hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2">
+                    <button @click.prevent="deleteModalOpen = false; deleteUrl = ''" type="button" class="rounded-xl border bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-md hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2">
                         Cancel
                     </button>
-                    <form :action="deleteUrl" method="POST">
+                    <form :action="deleteUrl" method="POST" @submit.prevent="if(deleteUrl) $el.submit()">
                         @csrf
                         @method('DELETE')
-                        <button type="submit" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+                        <button type="submit" x-bind:disabled="!deleteUrl" class="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50">
                             Yes, Delete
                         </button>
                     </form>
