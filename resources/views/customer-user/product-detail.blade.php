@@ -200,21 +200,23 @@
 
 @push('scripts')
 <script>
+// =====================================================
+// Product Detail Page Script
+// Catatan: IS_AUTHENTICATED, LOGIN_URL, CHECKOUT_URL,
+// SAVE_CART_URL, CSRF_TOKEN sudah dideklarasikan di
+// app.blade.php - JANGAN redeclare di sini!
+// =====================================================
+
 const pageConfigEl = document.getElementById('product-page-config');
 const pageConfig = pageConfigEl ? pageConfigEl.dataset : {};
 
-const IS_AUTHENTICATED = pageConfig.isAuth === '1';
-const LOGIN_URL = pageConfig.loginUrl || '/login';
-const CHECKOUT_URL = pageConfig.checkoutUrl || '/checkout';
-const SAVE_CART_URL = pageConfig.saveCartUrl || '/cart/save-for-checkout';
-
-const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-
+// Ambil dari pageConfig khusus halaman produk
 const ASSET_BASE_URL = pageConfig.assetBaseUrl || '/';
 const STORAGE_BASE_URL = pageConfig.storageBaseUrl || '/storage/';
-
 const PRODUCT_STOCK = parseInt(pageConfig.productStock || '0', 10);
-// PRODUCT_BASE dideklarasikan setelah getProductImageUrl agar fungsi sudah tersedia
+
+// Override IS_AUTHENTICATED dari pageConfig halaman ini jika perlu
+// (sudah tersedia dari app.blade.php sebagai IS_AUTHENTICATED)
 
 document.getElementById('proceed-to-checkout').addEventListener('click', function() {
     if (!IS_AUTHENTICATED) {
@@ -265,12 +267,17 @@ function selectSize(button) {
     selectedSize = button.getAttribute('data-size');
     const sizeButtons = document.querySelectorAll('.size-btn');
     sizeButtons.forEach(btn => {
-        btn.classList.remove('bg-[#010BEB]', 'text-white', 'border-blue-600');
-        btn.classList.add('border-gray-300', 'text-gray-800', 'hover:bg-gray-100');
+        // Reset all buttons to unselected state
+        btn.style.backgroundColor = '';
+        btn.style.color = '';
+        btn.style.borderColor = '';
+        btn.classList.remove('selected-size');
     });
-    button.classList.remove('border-gray-300', 'text-gray-800', 'hover:bg-gray-100');
-    button.classList.add('bg-[#010BEB]', 'text-white', 'border-blue-600');
-    document.getElementById('size-guide').classList.remove('hidden'); // Show size guide on size selection
+    // Highlight selected button
+    button.style.backgroundColor = '#010BEB';
+    button.style.color = '#ffffff';
+    button.style.borderColor = '#010BEB';
+    button.classList.add('selected-size');
 }
 
 function updateAmount(change) {
